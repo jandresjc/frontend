@@ -14,6 +14,6 @@ export class UploadAPIService {
 	}
 
 	uploadFile(filename, file) {
-        return this.apiHandlerService.upload(`${filename}`, file);
-    }
+    return this.apiHandlerService.upload(`${filename}`, file);
+  }
 }

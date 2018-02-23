@@ -10,7 +10,10 @@ import { SET_CAMPAIGNS_LIST } from '../../reducers/campaignsList.reducer';
 import { CampaignAPIService } from '../../services/api-routes/campaigns.service';
 import { UserAPIService } from '../../services/api-routes/user.service';
 import { CompleterService, CompleterData, CompleterItem } from 'ng2-completer';
-import { HttpParams } from '@angular/common/http';
+import { HttpEventType, HttpParams } from '@angular/common/http';
+import { UploadAPIService } from '../../services/api-routes/upload.service';
+import jsmediatags from 'jsmediatags';
+import {UtilService} from '../../services/util.service';
 
 @Component({
   selector: 'app-campaign',
@@ -27,20 +30,25 @@ export class CampaignComponent extends ParentComponent implements OnInit {
   userAvatar: any;
   isUploading: boolean;
   uploadProgress: any;
-  fileList: any = [];
+  selectedPicture: any = null;
   searchUserName: string = '';
   initialValue: string = 'a';
   usersList: any = [];
   selectedMembers: any = [];
   selectedMemberIds: any = [];
   dataService: CompleterData = this.completerService.local(this.usersList, 'id,username', 'username');
+  uploadLoading: boolean;
+  progress: any;
+  message: any;
 
   constructor(
     private formBuilder: FormBuilder,
     private store: Store<any>,
     private campaignAPIService: CampaignAPIService,
     private userAPIService: UserAPIService,
-    private completerService: CompleterService
+    private completerService: CompleterService,
+    private uploadAPIService: UploadAPIService,
+    private util: UtilService
   ) {
     super();
   }
@@ -108,7 +116,8 @@ export class CampaignComponent extends ParentComponent implements OnInit {
       'artistic_name': this.campaignForm.value.artistic_name,
       'video_link': this.campaignForm.value.video_link,
       'description': this.campaignForm.value.description,
-      'members': this.selectedMemberIds
+      'members': this.selectedMemberIds,
+      'picture': this.selectedPicture
     };
     let body = new HttpParams();
     for (const attribute in campaign) {
@@ -165,7 +174,44 @@ export class CampaignComponent extends ParentComponent implements OnInit {
   }
 
   setFile(event) {
-    this.fileList = event.target.files;
+    this.selectedPicture = event.target.files ? event.target.files[0] : {};
+    const formData: FormData = new FormData();
+    formData.append('file', this.selectedPicture);
+    this.uploadAPIService.getFilename(this.selectedPicture.name)
+      .subscribe(response => {
+        this.selectedPicture = response['url'];
+        this.uploadAPIService.uploadFile(response.url, formData)
+          .finally(() => {
+            this.uploadLoading = false;
+          })
+          .subscribe(
+            event  => {
+              if (event.type === HttpEventType.UploadProgress) {
+                const progress = Math.floor((event.loaded * 100) / event.total);
+                const current = this.util.toMB(event.loaded);
+                const total = this.util.toMB(event.total);
+                this.progress =  {'progress': progress, 'current': current, 'total': total};
+              } else if (event.type === HttpEventType.Response) {
+                // Done
+                this.selectedPicture = event.body['response'].upload;
+              }
+            },
+            err => {
+              this.message = {
+                type: 'danger',
+                data: 'Upload failed. Please try again'
+              };
+            }
+          );
+      }
+    );
+    /*const p = data.tags.picture;
+    let base64String = '';
+    for (let i = 0; i < p.data.length; i++) {
+      base64String += String.fromCharCode(p.data[i]);
+    }
+    this.image = 'data:' + p.format + ';base64,' + btoa(base64String);*/
+
   }
 
   close(event) {

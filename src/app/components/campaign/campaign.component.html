@@ -12,7 +12,12 @@
             <img [src]="userAvatar" alt="" *ngIf="!(userAvatar == null || userAvatar == '')">
             <input *ngIf="!isUploading" type="file" name="userImg" id="userImg" (change)="setFile($event)" />
             <label for="userImg" class="img-upload"><app-loading *ngIf="isUploading"></app-loading> Upload image</label>
-            <p *ngIf="uploadProgress">{{uploadProgress.progress}}% uploaded.</p>
+            <span *ngIf="uploadLoading" class="pull-left progress">
+                <app-loading></app-loading>
+                <span *ngIf="progress">
+                {{progress.progress}}% {{progress.current}}mb / {{progress.total}} mb
+                </span>
+            </span><p *ngIf="uploadProgress">{{uploadProgress.progress}}% uploaded.</p>
           </div>
           <form *ngIf="campaignForm" [formGroup]="campaignForm" class="edit-form"
                 (ngSubmit)="createCampaign($event)">
